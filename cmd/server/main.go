@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/mytheresa/go-hiring-challenge/app/categories"
 	"log"
 	"net/http"
 	"os"
@@ -36,11 +37,16 @@ func main() {
 
 	// Initialize handlers
 	prodRepo := models.NewProductsRepository(db)
-	cat := catalog.NewCatalogHandler(prodRepo)
+	catRepo := models.NewCategoriesRepository(db)
+	catalogHandler := catalog.NewCatalogHandler(prodRepo)
+	categoriesHandler := categories.NewCategoriesHandler(catRepo)
 
 	// Set up routing
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /catalog", cat.HandleGet)
+	mux.HandleFunc("GET /catalog", catalogHandler.HandleGet)
+	mux.HandleFunc("GET /catalog/{code}", catalogHandler.HandleGetDetail)
+	mux.HandleFunc("GET /categories", categoriesHandler.HandleGet)
+	mux.HandleFunc("POST /categories", categoriesHandler.HandleCreate)
 
 	// Set up the HTTP server
 	srv := &http.Server{
@@ -51,6 +57,12 @@ func main() {
 	// Start the server
 	go func() {
 		log.Printf("Starting server on http://%s", srv.Addr)
+		log.Printf("Available endpoints:")
+		log.Printf("  GET  /catalog, for fetching products filtered by category and price_less_than, paginated by offset and limit")
+		log.Printf("  GET  /catalog/{code}, for fetching products details with code")
+		log.Printf("  GET  /categories, for fetching all categories")
+		log.Printf("  POST /categories, for creating a new category")
+
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed: %s", err)
 		}
